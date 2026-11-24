@@ -1,26 +1,9 @@
 import json
 
 import pandas as pd
-import pytest
-from conftest import FIXTURES, FakeResponse
+from conftest import URLS
 
 from finflow.__main__ import main
-
-BASE = "https://data.sec.gov"
-URLS = {
-    "https://www.sec.gov/files/company_tickers.json": "company_tickers_synthetic.json",
-    f"{BASE}/api/xbrl/companyfacts/CIK0000000001.json": "companyfacts_synthetic.json",
-    f"{BASE}/submissions/CIK0000000001.json": "submissions_synthetic.json",
-    f"{BASE}/submissions/CIK0000000001-submissions-001.json": "submissions_page_synthetic.json",
-}
-
-
-@pytest.fixture
-def client(make_client, sleeps):
-    return make_client(
-        {url: FakeResponse(content=(FIXTURES / name).read_bytes()) for url, name in URLS.items()}
-    )
-
 
 def run(client, tmp_path, *extra):
     return main(

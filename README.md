@@ -1,14 +1,14 @@
 # FinFlow: Automated Financial Statements Data Pipeline
 
 ![Status](https://img.shields.io/badge/status-active%20development-blue)
-![Phase](https://img.shields.io/badge/phase-1%20of%205%20complete-0f1e36)
+![Phase](https://img.shields.io/badge/phase-2%20of%205%20complete-0f1e36)
 ![Python](https://img.shields.io/badge/Python-3.12-3776AB)
 ![Pandas](https://img.shields.io/badge/Pandas-3.1-150458)
 ![Data](https://img.shields.io/badge/data-SEC%20EDGAR-336791)
 
-An independent financial data management project. FinFlow is a Python ETL pipeline that acquires company financial statement data from the official SEC EDGAR REST APIs and is being built to standardise it with Pandas, validate it, calculate financial ratios and export traceable, analysis-ready datasets.
+An independent financial data management project. FinFlow is a Python ETL pipeline that acquires company financial statement data from the official SEC EDGAR REST APIs standardises it with Pandas and exports traceable datasets. Automated validation, financial ratios and a dashboard are being added.
 
-> **Status: active development.** Data acquisition, fiscal-period matching and source inspection are implemented, tested and run on real data. Canonical value selection, CSV exports, the data quality rules, financial ratios and the dashboard are **planned**, and are marked as such throughout.
+> **Status: active development.** Data acquisition, standardisation and CSV exports are implemented, tested and run on real data. The data quality rules, financial ratios and dashboard are **planned**, and are marked as such throughout.
 > Not investment advice, not an audit, and not affiliated with the SEC or any company listed.
 
 ## Contents
@@ -34,10 +34,10 @@ Analysts need figures that are comparable, checked and traceable to the filing t
 |---|---|
 | Acquire real financial statement data from official REST APIs within SEC fair access rules | ✅ Implemented |
 | Match values to fiscal years by their actual dates, keeping filing lineage | ✅ Implemented |
-| Standardise seven metrics for 10 companies over three fiscal years | 🚧 Mapping checked; final selection planned |
+| Standardise seven metrics for 10 companies over three fiscal years | ✅ Implemented (198 of 210 values reported) |
 | Detect missing, duplicate, inconsistent and irreconcilable data with automated rules | 📋 Planned |
 | Calculate revenue growth, net profit margin and return on equity | 📋 Planned |
-| Export analysis-ready CSV and JSON with a run manifest | 📋 Planned |
+| Export CSV and JSON with lineage and a run manifest | ✅ Implemented; validated exports planned |
 | Present verified results in a lightweight dashboard | 📋 Planned |
 
 ## Project status
@@ -49,9 +49,10 @@ Analysts need figures that are comparable, checked and traceable to the filing t
 | Flattening of nested JSON into Pandas tables | ✅ Complete | Every candidate fact and source field kept |
 | Annual fiscal-period matching | ✅ Complete | Handles 52 and 53-week years and a filing cutoff date |
 | Source inspection report | ✅ Complete | Availability, tag agreement and revisions |
-| Canonical value selection, long and wide CSV exports | 📋 Planned | Phase 2 |
+| Canonical value selection with conflict and restatement handling | ✅ Complete | One value per company, year and metric |
+| Long, wide, supporting and candidate CSV exports, run manifest | ✅ Complete | Published only after a complete run |
 | Data quality rules, financial ratios | 📋 Planned | Phase 3 |
-| End-to-end run command, fuller documentation | 📋 Planned | Phase 4 |
+| Full run including validation and ratios, final documentation | 📋 Planned | Phase 4 |
 | Streamlit dashboard | 📋 Planned | Phase 5 |
 
 ## Verified results
@@ -65,13 +66,17 @@ Measured on **2026-11-24** with data retrieved that day and the same filing cuto
 | Companies retrieved | 10 of 10 |
 | SEC source files, with checksums | 25 (43.8 MB) |
 | Candidate facts flattened (all available years, configured tags) | 16,726 |
-| Metric slots with a reported fact | 198 of 210 (94.3%) |
+| Eligible candidates for FY2022 to FY2025 | 807 |
+| Selected core values | 198 of 210 (94.3%) |
+| Company-year rows | 30 of 30 |
+| Unresolved conflicts | 0 |
 | Missing slots | 12 (total liabilities for AMZN, KO, WMT; parent equity for PG) |
+| Selected values (core and support) traced to raw SEC JSON by separate code | 344 of 344 |
 | Values compared with 10-K documents (nine company-years) | 59 of 59 matched |
-| Cached run | 1.1 s, 0 downloads |
-| Cached rerun | Output identical byte for byte |
+| Cached `run`: extract and transform stages | 0.3 s and 0.5 s |
+| Cached rerun | All four CSV files identical byte for byte |
 
-These figures describe **availability**, not accuracy of a final dataset, because final values have not been selected yet. The comparison covered a sample of filings; META and MSFT have not been compared.
+The quality rules have not run yet, so exports are marked `not_validated`. The 10-K comparison is a sample; META and MSFT filings have not been compared.
 
 **What the real data showed**
 
@@ -86,8 +91,8 @@ Details, filing links and unchecked items: [docs/verification.md](docs/verificat
 
 | Measure | Result |
 |---|---|
-| Automated tests | 37 of 37 passed |
-| Deliberate code breakages caught (one-off check on 36 tests) | 11 of 11 |
+| Automated tests | 56 of 56 passed |
+| Deliberate code breakages caught (one-off checks, Phases 1 and 2) | 23 of 23 |
 
 ## Technology stack
 
@@ -116,21 +121,21 @@ Documentation: [EDGAR APIs](https://www.sec.gov/search-filings/edgar-application
 ## ETL pipeline architecture
 
 ```mermaid
-flowchart LR
-    A[SEC EDGAR REST APIs] --> B[Extract: client and cache]
-    B --> M[(Raw JSON and manifest)]
-    M --> C[Transform: flatten and match periods]
-    C --> I[Source inspection report]
-    C -.-> S[Select canonical values]
-    S -.-> V[Validate]
-    V -.-> F[Calculate ratios]
-    F -.-> X[Export CSV and JSON]
-    X -.-> D[Streamlit dashboard]
-    classDef planned stroke-dasharray: 5 5
-    class S,V,F,X,D planned
+flowchart TD
+    A["SEC EDGAR REST APIs"] --> B["Extract: client, cache and manifest"]
+    B --> C["Transform: flatten and match fiscal periods"]
+    C --> S["Select one value per company, year and metric"]
+    S --> X["Export CSV and JSON with lineage"]
+    X -.-> V["Validate (planned)"]
+    V -.-> F["Calculate ratios (planned)"]
+    F -.-> D["Streamlit dashboard (planned)"]
+    classDef done fill:#1f3a5f,color:#ffffff,stroke:#1f3a5f
+    classDef planned fill:#f4f5f7,color:#444444,stroke:#888888,stroke-dasharray:5 5
+    class A,B,C,S,X done
+    class V,F,D planned
 ```
 
-Solid steps are implemented. Dashed steps are planned.
+Dark steps are implemented. Light, dashed steps are planned; validation and ratios will run before the final exports.
 
 **Design choices**
 - **Lineage:** responses are saved byte for byte, and each fact keeps its tag, unit, dates, form, filing date and accession number.
@@ -159,23 +164,28 @@ Fiscal years are not the same calendar period: fiscal 2025 ended on 26 January 2
 
 ## Transformation and standardisation
 
-**Implemented**
 1. Flatten every configured fact into one Pandas row with all source fields.
 2. Find each company's 10-K and 10-K/A filings, including older pages of its filing history.
 3. Match facts by actual dates, never by `fy` alone. A duration of 350 to 380 days is annual; quarterly and year-to-date values are excluded.
 4. Keep only the expected unit, eligible annual forms and facts filed by the cutoff date.
 5. Compare candidate tags side by side and label each slot as missing, agreeing, disagreeing or revised.
 
-**Planned (Phase 2)**
-
-6. Select one value per company, period and metric: the latest eligible disclosure, with documented tag priority and conflicts flagged rather than guessed.
+6. Select one value per company, period and metric: documented tag priority, then the latest eligible filing. Conflicts are flagged rather than guessed.
 7. Export a long table of facts with lineage and a wide company-year table.
 
-Zero and negative reported values are kept. Missing values are never replaced with zero.
+Example rows from the real `company_financials.csv` (columns shortened, USD millions here; exports hold unscaled values):
+
+| Ticker | Fiscal year | Period end | Revenue | Net income | Total liabilities | Missing |
+|---|---|---|---|---|---|---|
+| AAPL | 2024 | 2024-09-28 | 391,035 | 93,736 | 308,030 | |
+| WMT | 2025 | 2025-01-31 | 680,985 | 19,436 | *(empty)* | total_liabilities |
+
+
+Zero and negative reported values are kept. Missing values are never replaced with zero. Details: [methodology](docs/methodology.md) · [data dictionary](docs/data_dictionary.md)
 
 ## Data quality and validation
 
-**Implemented safeguards in extraction and transformation:** JSON check before saving, checksum verification, unit and annual-form filters, filing cutoff, annual-duration check, and reporting of missing slots, tag disagreements and revised values.
+**Implemented safeguards in extraction and transformation:** JSON check before saving, checksum verification, duplicate-key and conflict checks, unit and annual-form filters, filing cutoff, annual-duration check, and reporting of missing slots, tag disagreements and revised values.
 
 **Planned rule framework (Phase 3)**
 
@@ -213,10 +223,11 @@ Missing inputs or unsuitable denominators will give an empty result with a reaso
 python -m pytest
 ```
 
-**Last result (2026-11-24): 37 of 37 passed.** Tests use synthetic data and block network connections. They cover:
+**Last result (2026-11-24): 56 of 56 passed.** Tests use synthetic data and block network connections. They cover:
 
 - **Extraction:** request spacing, retries and back-off, `Retry-After`, permanent failures, caching, checksum changes and contact checks.
 - **Transformation:** quarterly and annual values, 52 and 53-week years, comparative values, amendments, cutoff dates, wrong units, and zero, negative and missing values.
+- **Selection and exports:** repeated values, restatements, tag priority, conflicts, duplicate keys, identical reruns, and incomplete runs that must not replace good data.
 - **Command line:** repeatable runs, partial failure and missing configuration.
 
 ## Project structure
@@ -228,11 +239,12 @@ finflow/
 │   └── metrics.json          # versioned metric-to-tag mapping
 ├── finflow/
 │   ├── extract.py            # SEC client, cache and source manifest
-│   ├── transform.py          # flattening and fiscal-period matching
+│   ├── transform.py          # flattening, period matching and selection
+│   ├── pipeline.py           # run stages and safe publication
 │   ├── inspect_source.py     # source inspection report
 │   └── __main__.py           # command line
 ├── tests/                    # pytest suite and synthetic fixtures
-├── docs/verification.md      # findings and 10-K comparison
+├── docs/                     # methodology, data dictionary, verification
 ├── data/                     # raw and processed data (not committed)
 ├── .env.example              # configuration template
 ├── pytest.ini
@@ -258,7 +270,13 @@ To retrieve real data, create a local `.env` and replace the placeholder with yo
 cp .env.example .env
 ```
 
-Inspect one company:
+Run the pipeline for all ten companies. Exports go to `data/processed/`:
+
+```bash
+python -m finflow run --as-of 2026-11-24
+```
+
+Inspect one company's source data:
 
 ```bash
 python -m finflow inspect --tickers AAPL --as-of 2026-11-24
@@ -270,13 +288,13 @@ Inspect all ten companies, with fiscal 2022 as support:
 python -m finflow inspect --start-year 2022 --as-of 2026-11-24
 ```
 
-Results are printed and saved to `data/inspection/source_inspection.csv`. Later runs use the cache; add `--refresh` to download again.
+Inspection results are saved to `data/inspection/source_inspection.csv`. Later runs use the cache; add `--refresh` to download again.
 Exit codes: `0` all companies succeeded, `1` at least one failed, `2` setup or source error.
 
 ## Roadmap
 
 - [x] **Phase 1:** setup, SEC acquisition, period matching and source inspection
-- [ ] **Phase 2:** canonical value selection, lineage, long and wide exports
+- [x] **Phase 2:** canonical value selection, lineage, long and wide exports
 - [ ] **Phase 3:** data quality rules, financial ratios, wider comparison with filings
 - [ ] **Phase 4:** end-to-end run, repeatability checks, data dictionary and methodology
 - [ ] **Phase 5:** Streamlit dashboard and screenshots

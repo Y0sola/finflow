@@ -76,3 +76,19 @@ def make_client():
         return extract.SecClient("FinFlow tests tester@test.invalid", FakeSession(responses))
 
     return make
+
+
+BASE = "https://data.sec.gov"
+URLS = {
+    "https://www.sec.gov/files/company_tickers.json": "company_tickers_synthetic.json",
+    f"{BASE}/api/xbrl/companyfacts/CIK0000000001.json": "companyfacts_synthetic.json",
+    f"{BASE}/submissions/CIK0000000001.json": "submissions_synthetic.json",
+    f"{BASE}/submissions/CIK0000000001-submissions-001.json": "submissions_page_synthetic.json",
+}
+
+
+@pytest.fixture
+def client(make_client, sleeps):
+    return make_client(
+        {url: FakeResponse(content=(FIXTURES / name).read_bytes()) for url, name in URLS.items()}
+    )

@@ -102,3 +102,103 @@ def match_annual_facts(facts, period_end, as_of):
     )
     is_instant = (eligible["period_type"] == "instant") & eligible["start"].isna()
     return eligible[is_annual | is_instant].copy()
+
+
+class TransformError(Exception):
+    """Source data does not have the structure the selection rules require."""
+
+
+def resolve_fiscal_years(filings, start_year, end_year):
+    """Return one original 10-K per fiscal year, defining that year's period end."""
+    targets = filings[
+        (filings["form"] == "10-K") & filings["fiscal_year"].between(start_year, end_year)
+    ]
+    repeated = targets.loc[targets["fiscal_year"].duplicated(), "fiscal_year"]
+    if not repeated.empty:
+        raise TransformError(f"More than one 10-K is labelled fiscal {sorted(set(repeated))}")
+    return targets[["fiscal_year", "period_end"]].reset_index(drop=True)
+
+
+def collect_candidates(facts, fiscal_years, as_of):
+    """Return every eligible fact for the target fiscal years, labelled with its year."""
+    frames = []
+    for target in fiscal_years.itertuples():
+        matched = match_annual_facts(facts, target.period_end, as_of)
+        frames.append(matched.assign(fiscal_year=target.fiscal_year))
+    if not frames:
+        return facts.iloc[0:0].assign(fiscal_year=pd.Series(dtype="int64"))
+    return pd.concat(frames, ignore_index=True)
+
+
+def select_one(candidates):
+    """Choose one fact from the candidates for a single company, year and metric.
+
+    1. Use the highest-priority tag that was reported.
+    2. Within that tag, use the most recently filed value (latest-known convention).
+    3. If that filing date carries different values, choose none and flag a conflict.
+
+    Returns (row, note). row is None when the conflict cannot be resolved.
+    """
+    best_tag = candidates[candidates["tag_priority"] == candidates["tag_priority"].min()]
+    latest = best_tag[best_tag["filed"] == best_tag["filed"].max()]
+    if latest["value"].nunique(dropna=False) > 1:
+        return None, "conflicting_values_same_date"
+
+    # Equal values filed on the same day: the highest accession number, so reruns agree.
+    chosen = latest.sort_values(["accn", "start"]).iloc[-1]
+    notes = []
+    if best_tag["value"].nunique() > 1:
+        notes.append("restated")
+    others = candidates[
+        (candidates["tag_priority"] > chosen["tag_priority"])
+        & (candidates["value"] != chosen["value"])
+    ]
+    if (others["filed"] > chosen["filed"]).any():
+        notes.append("review_other_tag_filed_later")
+    elif not others.empty:
+        notes.append("other_tag_differs")
+    return chosen, ";".join(notes)
+
+
+def select_canonical_facts(candidates):
+    """Return (selected facts, unresolved conflicts), at most one row per year and metric."""
+    selected, conflicts = [], []
+    for (fiscal_year, metric), group in candidates.groupby(["fiscal_year", "metric"]):
+        chosen, note = select_one(group)
+        if chosen is None:
+            conflicts.append(
+                {"fiscal_year": fiscal_year, "metric": metric, "note": note,
+                 "values": sorted(group["value"].unique().tolist())}
+            )
+        else:
+            selected.append({**chosen.to_dict(), "selection_note": note})
+    columns = [*candidates.columns, "selection_note"]
+    return pd.DataFrame(selected, columns=columns), conflicts
+
+
+def build_wide_table(facts, companies, fiscal_years, metric_names):
+    """Pivot selected facts to one row per expected company-year, keeping gaps empty.
+
+    Starting from the full grid of expected rows means a company-year with no data
+    still appears instead of silently vanishing.
+    """
+    grid = pd.DataFrame(companies)[["ticker", "cik", "company_name"]].merge(
+        pd.DataFrame({"fiscal_year": fiscal_years}), how="cross"
+    )
+    keys = ["ticker", "fiscal_year"]
+    if facts.duplicated([*keys, "metric"]).any():
+        raise TransformError("Selected facts contain duplicate company, year and metric keys")
+    values = facts.pivot(index=keys, columns="metric", values="value")
+    values = values.reindex(columns=metric_names).reset_index()
+    period_ends = facts[[*keys, "period_end"]].drop_duplicates()
+    wide = grid.merge(period_ends, on=keys, how="left", validate="one_to_one")
+    wide = wide.merge(values, on=keys, how="left", validate="one_to_one")
+    has_usd = facts[facts["unit"] == "USD"].groupby(keys).size()
+    wide["currency"] = ["USD" if (t, y) in has_usd.index else None
+                        for t, y in zip(wide["ticker"], wide["fiscal_year"])]
+    wide["missing_metrics"] = [
+        ";".join(name for name in metric_names if pd.isna(row[name]))
+        for _, row in wide.iterrows()
+    ]
+    wide["quality_status"] = "not_validated"
+    return wide

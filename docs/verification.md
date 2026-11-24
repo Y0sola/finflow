@@ -63,3 +63,20 @@ compared with the `Revenues` tag.
 
 **Not yet checked:** META and MSFT filings, the other fiscal years, and a full two-company comparison across all
 three years, which belongs to Phase 3.
+
+## Phase 2: selected dataset (run 2026-11-24, same cutoff and data)
+
+| Check | Result |
+|---|---|
+| Selected core facts | 198 of 210 expected; 12 missing; 0 unresolved conflicts |
+| Company-year rows | 30 of 30 |
+| Selected rows (core and support) traced to raw JSON by separate code | 344 of 344, on tag, unit, dates, value, form, filing date and accession number |
+| Rows where the same tag has a later eligible filing | 0 |
+| Filing link contains the accession number | 344 of 344 |
+| Values that differ between the long and wide exports | 0 |
+| Empty metric cells in the wide export | 12, equal to the missing count |
+| Phase 1 sample of 10-K values compared with the wide export | 59 of 59 matched, 4 of 4 absent in both |
+| Cached rerun | All four CSV files identical byte for byte |
+
+Selection notes: 192 with none; 3 `restated` (NVDA FY2023 and FY2024 EPS, WMT FY2023 EPS); 3 `other_tag_differs`
+(WMT revenue). The tracing check confirms the output matches the SEC data; the 10-K comparison is still a sample.

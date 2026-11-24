@@ -1,4 +1,4 @@
-"""Command line entry point: python -m finflow inspect --tickers AAPL --as-of YYYY-MM-DD"""
+"""Command line entry point: python -m finflow {inspect,run} --as-of YYYY-MM-DD"""
 
 import argparse
 import json
@@ -19,6 +19,7 @@ from finflow.extract import (
     resolve_companies,
 )
 from finflow.inspect_source import inspect_company
+from finflow.pipeline import run_pipeline
 
 PROJECT_DIR = Path(__file__).resolve().parent.parent
 logger = logging.getLogger("finflow")
@@ -35,14 +36,18 @@ def parse_date(text):
 def build_parser():
     parser = argparse.ArgumentParser(prog="finflow")
     commands = parser.add_subparsers(dest="command", required=True)
-    inspect = commands.add_parser("inspect", help="check which metrics the SEC data contains")
-    inspect.add_argument("--tickers", nargs="+", help="default: every configured company")
-    inspect.add_argument("--start-year", type=int, default=2023)
-    inspect.add_argument("--end-year", type=int, default=2025)
-    inspect.add_argument("--as-of", type=parse_date, required=True, help="YYYY-MM-DD")
-    inspect.add_argument("--refresh", action="store_true", help="download again")
-    inspect.add_argument("--raw-dir", type=Path, default=PROJECT_DIR / "data" / "raw")
-    inspect.add_argument("--output-dir", type=Path, default=PROJECT_DIR / "data" / "inspection")
+    for name, help_text, output in [
+        ("inspect", "check which metrics the SEC data contains", "inspection"),
+        ("run", "extract, transform and export the dataset", "processed"),
+    ]:
+        command = commands.add_parser(name, help=help_text)
+        command.add_argument("--tickers", nargs="+", help="default: every configured company")
+        command.add_argument("--start-year", type=int, default=2023)
+        command.add_argument("--end-year", type=int, default=2025)
+        command.add_argument("--as-of", type=parse_date, required=True, help="YYYY-MM-DD")
+        command.add_argument("--refresh", action="store_true", help="download again")
+        command.add_argument("--raw-dir", type=Path, default=PROJECT_DIR / "data" / "raw")
+        command.add_argument("--output-dir", type=Path, default=PROJECT_DIR / "data" / output)
     return parser
 
 
@@ -91,11 +96,30 @@ def run_inspect(args, client):
     return 0
 
 
+def run_full(args, client):
+    """Run the pipeline. Returns 0 if all companies succeeded and 1 if any failed."""
+    companies, metrics = load_config("companies.json"), load_config("metrics.json")
+    manifest = run_pipeline(
+        client, args.tickers or companies["tickers"], metrics["metrics"],
+        {"companies": companies["version"], "metrics": metrics["version"]},
+        args.start_year, args.end_year, args.as_of, args.raw_dir, args.output_dir, args.refresh,
+    )
+    print(f"Run {manifest['run_id']}: {manifest['status'].upper()}")
+    for name, value in manifest["counts"].items():
+        print(f"  {name}: {value}")
+    print(f"  selection_notes: {manifest['selection_notes']}")
+    print(f"  stage_seconds: {manifest['stage_seconds']}")
+    for ticker, reason in manifest["failed_companies"].items():
+        print(f"  FAILED {ticker}: {reason}")
+    return 1 if manifest["failed_companies"] else 0
+
+
 def main(argv=None, client=None):
     args = build_parser().parse_args(argv)
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
     try:
-        return run_inspect(args, client or SecClient())
+        action = run_full if args.command == "run" else run_inspect
+        return action(args, client or SecClient())
     except (ConfigurationError, SourceError) as error:
         logger.error("%s", error)
         return 2
