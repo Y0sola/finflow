@@ -1,0 +1,44 @@
+{
+ "cik": "1",
+ "filings": {
+  "recent": {
+   "accessionNumber": [
+    "0000000001-24-000002",
+    "0000000001-24-000009",
+    "0000000001-24-000001"
+   ],
+   "form": [
+    "10-K/A",
+    "8-K",
+    "10-K"
+   ],
+   "filingDate": [
+    "2024-06-01",
+    "2024-05-01",
+    "2024-03-01"
+   ],
+   "reportDate": [
+    "2024-01-06",
+    "2024-05-01",
+    "2024-01-06"
+   ],
+   "primaryDocument": [
+    "a.htm",
+    "e.htm",
+    "k24.htm"
+   ]
+  },
+  "files": [
+   {
+    "name": "CIK0000000001-submissions-001.json",
+    "filingFrom": "2022-01-01",
+    "filingTo": "2023-12-31"
+   },
+   {
+    "name": "CIK0000000001-submissions-002.json",
+    "filingFrom": "2010-01-01",
+    "filingTo": "2021-12-31"
+   }
+  ]
+ }
+}

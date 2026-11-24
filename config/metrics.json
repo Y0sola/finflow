@@ -1,0 +1,128 @@
+{
+  "version": "0.2.0",
+  "note": "Candidate tags in priority order, checked against SEC data for the ten configured companies, fiscal 2022 to 2025 (see docs/verification.md). 'core': false marks supporting fields that are excluded from the seven-metric headline count.",
+  "metrics": [
+    {
+      "name": "revenue",
+      "description": "Consolidated total revenue for the fiscal year",
+      "core": true,
+      "unit": "USD",
+      "period_type": "duration",
+      "tags": [
+        "Revenues",
+        "RevenueFromContractWithCustomerExcludingAssessedTax"
+      ],
+      "rationale": "Revenues comes first because Walmart reports both tags with different values: Revenues is total revenue, while the contract tag is net sales without membership and other income. Where the other companies report both tags for a year, the values agree. SalesRevenueNet was dropped because it matched no year in scope. Tags are never added together."
+    },
+    {
+      "name": "net_income",
+      "description": "Net income attributable to the parent company",
+      "core": true,
+      "unit": "USD",
+      "period_type": "duration",
+      "tags": [
+        "NetIncomeLoss"
+      ],
+      "rationale": "NetIncomeLoss is the parent-attributable figure. ProfitLoss includes noncontrolling interests and is not a substitute."
+    },
+    {
+      "name": "total_assets",
+      "description": "Total assets at fiscal year end",
+      "core": true,
+      "unit": "USD",
+      "period_type": "instant",
+      "tags": [
+        "Assets"
+      ],
+      "rationale": "Standard balance sheet total."
+    },
+    {
+      "name": "total_liabilities",
+      "description": "Total liabilities at fiscal year end",
+      "core": true,
+      "unit": "USD",
+      "period_type": "instant",
+      "tags": [
+        "Liabilities"
+      ],
+      "rationale": "AMZN, KO and WMT have no Liabilities fact and print no such subtotal on the balance sheets checked. The value stays missing; it is not derived silently."
+    },
+    {
+      "name": "shareholders_equity",
+      "description": "Equity attributable to the parent company at fiscal year end",
+      "core": true,
+      "unit": "USD",
+      "period_type": "instant",
+      "tags": [
+        "StockholdersEquity"
+      ],
+      "rationale": "Excludes noncontrolling interests, matching the NetIncomeLoss numerator for return on equity. PG reports only total equity including noncontrolling interests, so this stays missing for PG."
+    },
+    {
+      "name": "operating_cash_flow",
+      "description": "Net cash from operating activities for the fiscal year",
+      "core": true,
+      "unit": "USD",
+      "period_type": "duration",
+      "tags": [
+        "NetCashProvidedByUsedInOperatingActivities"
+      ],
+      "rationale": "Standard cash flow statement total."
+    },
+    {
+      "name": "diluted_eps",
+      "description": "Diluted earnings per share for the fiscal year",
+      "core": true,
+      "unit": "USD/shares",
+      "period_type": "duration",
+      "tags": [
+        "EarningsPerShareDiluted"
+      ],
+      "rationale": "Never combined with basic EPS. Stock splits can cause later filings to restate earlier years."
+    },
+    {
+      "name": "total_equity_including_nci",
+      "description": "Total equity including noncontrolling interests (supporting field)",
+      "core": false,
+      "unit": "USD",
+      "period_type": "instant",
+      "tags": [
+        "StockholdersEquityIncludingPortionAttributableToNoncontrollingInterest"
+      ],
+      "rationale": "Used only in the accounting identity check. Does not replace parent equity."
+    },
+    {
+      "name": "liabilities_and_equity",
+      "description": "Total liabilities and equity (supporting field)",
+      "core": false,
+      "unit": "USD",
+      "period_type": "instant",
+      "tags": [
+        "LiabilitiesAndStockholdersEquity"
+      ],
+      "rationale": "Supports the accounting identity check."
+    },
+    {
+      "name": "noncontrolling_interest",
+      "description": "Equity owned by minority holders of subsidiaries (supporting field)",
+      "core": false,
+      "unit": "USD",
+      "period_type": "instant",
+      "tags": [
+        "MinorityInterest"
+      ],
+      "rationale": "Explains the difference between total and parent equity."
+    },
+    {
+      "name": "redeemable_noncontrolling_interest",
+      "description": "Noncontrolling interest shown between liabilities and equity (supporting field)",
+      "core": false,
+      "unit": "USD",
+      "period_type": "instant",
+      "tags": [
+        "RedeemableNoncontrollingInterestEquityCarryingAmount"
+      ],
+      "rationale": "Reported by WMT and TSLA. Assets do not equal liabilities plus equity without it."
+    }
+  ]
+}

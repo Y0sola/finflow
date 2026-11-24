@@ -1,0 +1,5 @@
+{
+  "version": "0.1.0",
+  "note": "Tickers only. CIKs and company names are resolved from the SEC ticker mapping at run time.",
+  "tickers": ["AAPL", "MSFT", "NVDA", "GOOGL", "AMZN", "META", "TSLA", "KO", "WMT", "PG"]
+}

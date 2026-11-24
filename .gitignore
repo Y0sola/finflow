@@ -1,0 +1,36 @@
+# Secrets and personal contact details
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+credentials*.json
+.streamlit/secrets.toml
+
+# Python
+.venv/
+__pycache__/
+*.pyc
+.ipynb_checkpoints/
+.pytest_cache/
+
+# Downloaded and generated data (reproducible from the SEC API)
+data/raw/*
+!data/raw/.gitkeep
+data/processed/*
+!data/processed/.gitkeep
+data/inspection/
+
+# Private working notes
+FinFlow_Project_Brief.md
+PROGRESS.md
+CLAUDE.md
+notes/
+.claude/
+
+# OS / editor
+.DS_Store
+.vscode/
+.idea/
+*.log
+*.tmp
